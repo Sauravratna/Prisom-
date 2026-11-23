@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>প্রিজমে আলোর পথ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f7f9;
+    --fg: #1b2230;
+    --muted: #5a6577;
+    --panel: #ffffff;
+    --line: #d8dee7;
+    --accent: #0e7c8c;
+    --ray: #d4820a;
+    --delta: #c0286f;
+    --glass: #4fb0c2;
+    --normal: #6f7b90;
+    --font: "Hind Siliguri", "Noto Sans Bengali", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151c; --fg: #e8edf4; --muted: #9ba6b8; --panel: #171d27; --line: #2a3342;
+      --accent: #4fc3d4; --ray: #f2b134; --delta: #ff6fb0; --glass: #4aa6b8; --normal: #8d98ad;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151c; --fg: #e8edf4; --muted: #9ba6b8; --panel: #171d27; --line: #2a3342;
+    --accent: #4fc3d4; --ray: #f2b134; --delta: #ff6fb0; --glass: #4aa6b8; --normal: #8d98ad;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.55;
+    padding-block: 20px 28px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 16px; }
+  h1 { font-size: 1.55rem; line-height: 1.25; margin: 0; font-weight: 700; text-wrap: balance; }
+  .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.95rem; }
+  .grid { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+  @media (min-width: 920px) { .grid { grid-template-columns: minmax(0, 1fr) 340px; align-items: start; } }
+
+  .stage { position: relative; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  #view { width: 100%; height: clamp(340px, 64vh, 640px); touch-action: none; cursor: grab; }
+  #view:active { cursor: grabbing; }
+  #view canvas { display: block; width: 100%; height: 100%; }
+  .hint { position: absolute; left: 12px; bottom: 10px; font-size: 0.8rem; color: var(--muted); pointer-events: none; }
+
+  .side { display: grid; gap: 14px; min-width: 0; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; }
+  .card h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+  .ctl { display: grid; gap: 4px; }
+  .ctl .row { display: flex; justify-content: space-between; gap: 8px; font-size: 0.95rem; }
+  .ctl output { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--accent); }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+  button {
+    font: inherit; font-size: 0.9rem; color: var(--fg); background: transparent;
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+  .vals { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; text-align: center; }
+  .vals div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 2px; }
+  .vals b { display: block; font-variant-numeric: tabular-nums; font-size: 1rem; }
+  .vals span { font-size: 0.78rem; color: var(--muted); }
+  .vals .d b { color: var(--delta); }
+  .status { margin: 0; font-size: 0.92rem; color: var(--muted); min-height: 2.9em; }
+  .status.ok { color: var(--accent); }
+  .status.warn { color: var(--delta); }
+  .formula { margin: 0; font-size: 0.95rem; color: var(--muted); }
+  .formula strong { color: var(--fg); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<main class="wrap">
+  <header>
+    <h1>প্রিজমে আলোর পথ</h1>
+    <p class="sub">পরীক্ষা নং-২১: স্পেকট্রোমিটারের সাহায্যে প্রিজমের উপাদানের প্রতিসরাংক নির্ণয়</p>
+  </header>
+
+  <div class="grid">
+    <section class="stage" aria-label="প্রিজমের ৩ডি মডেল">
+      <div id="view"></div>
+      <div class="hint">টেনে ঘোরাও · দুই আঙুলে বা স্ক্রলে জুম</div>
+    </section>
+
+    <div class="side">
+      <section class="card" aria-label="নিয়ন্ত্রণ">
+        <h2>মান বদলাও</h2>
+        <div class="ctl">
+          <div class="row"><label for="i1">আপতন কোণ i₁</label><output id="i1o">50°</output></div>
+          <input id="i1" type="range" min="30" max="80" step="0.5" value="50">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="ang">প্রিজম কোণ A</label><output id="ango">60°</output></div>
+          <input id="ang" type="range" min="40" max="75" step="1" value="60">
+        </div>
+        <div class="ctl">
+          <div class="row"><label for="mu">প্রতিসরাংক μ</label><output id="muo">1.50</output></div>
+          <input id="mu" type="range" min="1.3" max="1.9" step="0.01" value="1.5">
+        </div>
+        <div class="btns">
+          <button id="mind" type="button">ন্যূনতম বিচ্যুতিতে নাও</button>
+          <button id="spin" type="button" aria-pressed="false">নিজে নিজে ঘুরুক</button>
+          <button id="reset" type="button">ভিউ রিসেট</button>
+        </div>
+      </section>
+
+      <section class="card" aria-label="কোণের মান">
+        <h2>কোণের মান</h2>
+        <div class="vals">
+          <div><b id="vi1">–</b><span>i₁</span></div>
+          <div><b id="vr1">–</b><span>r₁</span></div>
+          <div><b id="vr2">–</b><span>r₂</span></div>
+          <div><b id="vi2">–</b><span>i₂</span></div>
+          <div class="d"><b id="vd">–</b><span>δ</span></div>
+        </div>
+        <p id="status" class="status"></p>
+        <p class="formula">এই A ও μ-তে δₘ = <strong id="vdm">–</strong><br>μ = sin((A+δₘ)/2) ÷ sin(A/2)</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+  var D2R = Math.PI / 180, R2D = 180 / Math.PI;
+  var css = function (n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); };
+
+  /* ---------- 2D optics ---------- */
+  var dot = function (a, b) { return a[0] * b[0] + a[1] * b[1]; };
+  var cross = function (a, b) { return a[0] * b[1] - a[1] * b[0]; };
+  var add = function (a, b) { return [a[0] + b[0], a[1] + b[1]]; };
+  var sub = function (a, b) { return [a[0] - b[0], a[1] - b[1]]; };
+  var mul = function (a, k) { return [a[0] * k, a[1] * k]; };
+
+  // N must face the incoming side (d . N < 0). eta = n1/n2. Returns null on total internal reflection.
+  function refract(d, N, eta) {
+    var ci = -dot(d, N);
+    var s2 = eta * eta * (1 - ci * ci);
+    if (s2 > 1) return null;
+    var ct = Math.sqrt(1 - s2);
+    return add(mul(d, eta), mul(N, eta * ci - ct));
+  }
+  // p + s*d = q + t*e
+  function lineInt(p, d, q, e) {
+    var den = cross(d, e);
+    if (Math.abs(den) < 1e-9) return null;
+    var qp = sub(q, p);
+    return [cross(qp, e) / den, cross(qp, d) / den];
+  }
+
+  function compute(Ad, mu, i1d) {
+    var A = Ad * D2R, i1 = i1d * D2R, w = 2;
+    var H = w / Math.tan(A / 2), L = Math.hypot(w, H);
+    var n1 = [-H / L, w / L], n2 = [H / L, w / L];
+    var m1 = [H / L, -w / L], m2 = [-H / L, -w / L];
+    var tA = [w / L, H / L];
+    var B = [-w, 0], C = [w, 0], Ap = [0, H];
+    var t = 0.4;
+    var Q = [-w + t * w, t * H];
+    var d = add(mul(m1, Math.cos(i1)), mul(tA, Math.sin(i1)));
+    var d1 = refract(d, n1, 1 / mu);
+    var out = { A: A, H: H, B: B, C: C, Ap: Ap, n1: n1, n2: n2, m1: m1, m2: m2, Q: Q, d: d, d1: d1, status: 'ok' };
+
+    // inner ray to face AC
+    var e = sub(Ap, C);
+    var hit = lineInt(Q, d1, C, e);
+    if (!hit || hit[0] <= 0 || hit[1] < 0.03 || hit[1] > 0.97) { out.status = 'miss'; return out; }
+    var R = add(Q, mul(d1, hit[0]));
+    out.R = R;
+    var d2 = refract(d1, mul(n2, -1), mu);
+    if (!d2) { out.status = 'tir'; out.dr = sub(d1, mul(n2, 2 * dot(d1, n2))); return out; }
+    out.d2 = d2;
+    var r1 = Math.acos(Math.max(-1, Math.min(1, dot(d1, m1))));
+    var r2 = Math.acos(Math.max(-1, Math.min(1, dot(d1, n2))));
+    var i2 = Math.acos(Math.max(-1, Math.min(1, dot(d2, n2))));
+    out.r1 = r1 * R2D; out.r2 = r2 * R2D; out.i2 = i2 * R2D; out.i1 = i1d;
+    out.delta = i1d + out.i2 - Ad;
+    var k = lineInt(Q, d, R, d2);
+    if (k && k[0] > 0 && k[1] < 0) out.K = add(Q, mul(d, k[0]));
+    var o = lineInt(Q, m1, R, m2);
+    if (o && o[0] > 0 && o[1] > 0) out.O = add(Q, mul(m1, o[0]));
+    return out;
+  }
+
+  /* ---------- three.js scene ---------- */
+  var view = document.getElementById('view');
+  var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setClearColor(0x000000, 0);
+  view.appendChild(renderer.domElement);
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(40, 1.4, 0.1, 120);
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 4;
+  controls.maxDistance = 32;
+  controls.autoRotateSpeed = 2.2;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+  var sun = new THREE.DirectionalLight(0xffffff, 0.55);
+  sun.position.set(3, 6, 5);
+  scene.add(sun);
+
+  var dyn = new THREE.Group();
+  scene.add(dyn);
+
+  function v3(p, z) { return new THREE.Vector3(p[0], p[1], z || 0); }
+  var Y = new THREE.Vector3(0, 1, 0);
+
+  function seg(a, b, r, color) {
+    var v = new THREE.Vector3().subVectors(b, a), len = v.length();
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 10, 1), new THREE.MeshBasicMaterial({ color: color }));
+    m.position.copy(a).addScaledVector(v, 0.5);
+    m.quaternion.setFromUnitVectors(Y, v.clone().normalize());
+    return m;
+  }
+  function dashed(a, b, r, color, dash, gap) {
+    var v = new THREE.Vector3().subVectors(b, a), len = v.length(), dir = v.clone().normalize();
+    for (var s = 0; s < len; s += dash + gap) {
+      var e = Math.min(s + dash, len);
+      dyn.add(seg(a.clone().addScaledVector(dir, s), a.clone().addScaledVector(dir, e), r, color));
+    }
+  }
+  function arrow(a, b, color) {
+    var dir = new THREE.Vector3().subVectors(b, a).normalize();
+    var c = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 14), new THREE.MeshBasicMaterial({ color: color }));
+    c.position.copy(a).addScaledVector(new THREE.Vector3().subVectors(b, a), 0.5);
+    c.quaternion.setFromUnitVectors(Y, dir);
+    dyn.add(c);
+  }
+  function ray(a, b, color) { dyn.add(seg(a, b, 0.045, color)); arrow(a, b, color); }
+
+  function arc(center, dirA, dirB, radius, color) {
+    var a0 = Math.atan2(dirA[1], dirA[0]), a1 = Math.atan2(dirB[1], dirB[0]);
+    var diff = ((a1 - a0 + Math.PI * 3) % (2 * Math.PI)) - Math.PI;
+    var n = 16, prev = null;
+    for (var i = 0; i <= n; i++) {
+      var a = a0 + diff * i / n;
+      var p = v3([center[0] + radius * Math.cos(a), center[1] + radius * Math.sin(a)]);
+      if (prev) dyn.add(seg(prev, p, 0.022, color));
+      prev = p;
+    }
+    var mid = a0 + diff / 2;
+    return [Math.cos(mid), Math.sin(mid)];
+  }
+
+  function label(text, pos, color, scale, bold) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 128;
+    var g = c.getContext('2d');
+    g.font = (bold ? '700 ' : '500 ') + '70px "Hind Siliguri","Segoe UI",sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.lineJoin = 'round'; g.lineWidth = 12;
+    g.strokeStyle = css('--panel');
+    g.strokeText(text, 64, 68);
+    g.fillStyle = color;
+    g.fillText(text, 64, 68);
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+    sp.position.copy(pos);
+    sp.scale.set(scale || 0.6, scale || 0.6, 1);
+    sp.renderOrder = 10;
+    dyn.add(sp);
+  }
+
+  function clearDyn() {
+    dyn.traverse(function (o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    });
+    dyn.clear();
+  }
+
+  /* ---------- build ---------- */
+  var el = function (id) { return document.getElementById(id); };
+  var fmt = function (x) { return x.toFixed(1) + '°'; };
+
+  function build() {
+    clearDyn();
+    var Ad = +el('ang').value, mu = +el('mu').value, i1d = +el('i1').value;
+    el('i1o').textContent = i1d.toFixed(1) + '°';
+    el('ango').textContent = Ad + '°';
+    el('muo').textContent = mu.toFixed(2);
+
+    var r = compute(Ad, mu, i1d);
+    var fg = css('--fg'), rayC = css('--ray'), dC = css('--delta'), nC = css('--normal'), glassC = css('--glass');
+    var depth = 2.4;
+
+    // minimum deviation info
+    var sm = mu * Math.sin(r.A / 2);
+    el('vdm').textContent = sm <= 1 ? fmt(2 * Math.asin(sm) * R2D - Ad) : '–';
+
+    // glass prism
+    var shape = new THREE.Shape();
+    shape.moveTo(r.B[0], r.B[1]); shape.lineTo(r.C[0], r.C[1]); shape.lineTo(r.Ap[0], r.Ap[1]); shape.closePath();
+    var geo = new THREE.ExtrudeGeometry(shape, { depth: depth, bevelEnabled: false });
+    geo.translate(0, 0, -depth / 2);
+    dyn.add(new THREE.Mesh(geo, new THREE.MeshPhongMaterial({
+      color: glassC, transparent: true, opacity: 0.3, shininess: 90, side: THREE.DoubleSide, depthWrite: false
+    })));
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color: fg, transparent: true, opacity: 0.6 }));
+    dyn.add(edges);
+
+    var Q = r.Q;
+    var P = sub(Q, mul(r.d, 3.2));
+    ray(v3(P), v3(Q), rayC);
+    el('vi1').textContent = fmt(i1d);
+
+    // vertex labels
+    label('A', v3([0, r.H + 0.45]), fg, 0.7, true);
+    label('B', v3([r.B[0] - 0.4, -0.38]), fg, 0.7, true);
+    label('C', v3([r.C[0] + 0.4, -0.38]), fg, 0.7, true);
+    label('P', v3(add(P, [-0.1, -0.35])), fg, 0.7, true);
+    label('Q', v3(add(Q, mul(r.n1, 0.38))), fg, 0.7, true);
+
+    // normal at Q
+    var Nend = add(Q, mul(r.n1, 1.5));
+    dashed(v3(Q), v3(Nend), 0.018, nC, 0.14, 0.1);
+    label('N', v3(add(Nend, mul(r.n1, 0.3))), fg, 0.6, true);
+
+    var st = el('status');
+    st.className = 'status';
+
+    if (r.status === 'miss') {
+      var far = add(Q, mul(r.d1, 2.2));
+      ray(v3(Q), v3(far), rayC);
+      ['vr1', 'vr2', 'vi2', 'vd'].forEach(function (k) { el(k).textContent = '–'; });
+      st.className = 'status warn';
+      st.textContent = 'এই মানে রশ্মি AC তলে পৌঁছায় না। i₁ বা A একটু বদলাও।';
+      return;
+    }
+
+    var R = r.R;
+    ray(v3(Q), v3(R), rayC);
+    label('R', v3(add(R, mul(r.n2, 0.38))), fg, 0.7, true);
+    var Mend = add(R, mul(r.n2, 1.5));
+    dashed(v3(R), v3(Mend), 0.018, nC, 0.14, 0.1);
+    label('M', v3(add(Mend, mul(r.n2, 0.3))), fg, 0.6, true);
+
+    if (r.status === 'tir') {
+      var rf = add(R, mul(r.dr, 1.8));
+      ray(v3(R), v3(rf), rayC);
+      ['vr1', 'vr2', 'vi2', 'vd'].forEach(function (k) { el(k).textContent = '–'; });
+      st.className = 'status warn';
+      st.textContent = 'AC তলে পূর্ণ অভ্যন্তরীণ প্রতিফলন হচ্ছে, রশ্মি বের হয় না। i₁ বাড়িয়ে দেখো।';
+      return;
+    }
+
+    var S = add(R, mul(r.d2, 3.2));
+    ray(v3(R), v3(S), rayC);
+    label('S', v3(add(S, [0.3, -0.3])), fg, 0.7, true);
+
+    // internal normals and O
+    if (r.O) {
+      dashed(v3(Q), v3(r.O), 0.018, nC, 0.14, 0.1);
+      dashed(v3(R), v3(r.O), 0.018, nC, 0.14, 0.1);
+      label('O', v3(add(r.O, [0, -0.38])), fg, 0.6, true);
+    }
+
+    // angle arcs
+    var rad = 0.62;
+    var b1 = arc(Q, r.n1, mul(r.d, -1), rad, fg);
+    label('i₁', v3(add(Q, mul(b1, rad + 0.34))), fg, 0.5);
+    var b2 = arc(Q, r.m1, r.d1, rad * 0.8, fg);
+    label('r₁', v3(add(Q, mul(b2, rad * 0.8 + 0.36))), fg, 0.5);
+    var b3 = arc(R, r.m2, mul(r.d1, -1), rad * 0.8, fg);
+    label('r₂', v3(add(R, mul(b3, rad * 0.8 + 0.36))), fg, 0.5);
+    var b4 = arc(R, r.n2, r.d2, rad, fg);
+    label('i₂', v3(add(R, mul(b4, rad + 0.34))), fg, 0.5);
+
+    // deviation
+    if (r.K) {
+      var T = add(r.K, mul(r.d, 1.1));
+      dashed(v3(Q), v3(T), 0.022, dC, 0.14, 0.1);
+      dashed(v3(r.K), v3(R), 0.022, dC, 0.14, 0.1);
+      var bd = arc(r.K, r.d, r.d2, 0.5, dC);
+      label('δ', v3(add(r.K, mul(bd, 0.95))), dC, 0.55, true);
+      label('K', v3(add(r.K, [-0.1, 0.4])), fg, 0.5, true);
+      label('T', v3(add(T, [0.15, 0.3])), fg, 0.55, true);
+    }
+
+    el('vr1').textContent = fmt(r.r1);
+    el('vr2').textContent = fmt(r.r2);
+    el('vi2').textContent = fmt(r.i2);
+    el('vd').textContent = fmt(r.delta);
+    if (Math.abs(r.i2 - i1d) < 0.6) {
+      st.className = 'status ok';
+      st.textContent = 'ন্যূনতম বিচ্যুতির অবস্থা: i₁ = i₂ এবং r₁ = r₂, আর A = r₁ + r₂।';
+    } else {
+      st.textContent = 'রশ্মির পথ P → Q → R → S। A = r₁ + r₂ = ' + (r.r1 + r.r2).toFixed(1) + '°।';
+    }
+  }
+
+  /* ---------- camera / resize ---------- */
+  function fitCamera(reset) {
+    var w = view.clientWidth, h = view.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    if (reset) {
+      var dist = Math.min(26, Math.max(11, 13.5 / camera.aspect));
+      controls.target.set(0, 1.5, 0);
+      camera.position.set(0.12 * dist, 0.22 * dist, dist);
+      controls.update();
+    }
+  }
+
+  new ResizeObserver(function () { fitCamera(false); }).observe(view);
+
+  /* ---------- UI ---------- */
+  ['i1', 'ang', 'mu'].forEach(function (id) { el(id).addEventListener('input', build); });
+  el('mind').addEventListener('click', function () {
+    var A = +el('ang').value * D2R, mu = +el('mu').value;
+    var s = mu * Math.sin(A / 2);
+    if (s > 1) return;
+    var i = Math.asin(s) * R2D;
+    i = Math.max(30, Math.min(80, Math.round(i * 2) / 2));
+    el('i1').value = i;
+    build();
+  });
+  el('spin').addEventListener('click', function (e) {
+    controls.autoRotate = !controls.autoRotate;
+    e.currentTarget.setAttribute('aria-pressed', controls.autoRotate ? 'true' : 'false');
+  });
+  el('reset').addEventListener('click', function () { fitCamera(true); });
+
+  var rebuild = function () { build(); };
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', rebuild);
+  }
+  new MutationObserver(rebuild).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  fitCamera(true);
+  build();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(build);
+
+  (function loop() {
+    controls.update();
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  })();
+})();
+</script>
+</body>
+  </html>
